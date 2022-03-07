@@ -1,9 +1,9 @@
-// ESP-SAKURA 1.00
+// ESP-SAKURA 1.01
 // Copyright 2022 taiga
 
 #define MANUFACTURER    "SAKURA"
 #define MODEL           "DH1637E"
-#define VERSION         "1.00"
+#define VERSION         "1.01"
 
 #define UART_RX         3
 #define UART_TX         1
@@ -76,6 +76,7 @@ extern "C" int XPGM_PRINTF_P(PGM_P formatP, ...) {
   vsnprintf_P(number, 128, formatP, va);
   va_end(va);
   MQTTclient.publish(MQTTprefix("HomeKit", "Message", 0), number);
+  return 0;
 }
 extern "C" homekit_characteristic_t homekitTargetTemperature;
 extern "C" homekit_characteristic_t homekitInputTemperature;
@@ -239,6 +240,7 @@ void setup() {
     messageSerial.print(".");
   }
 #endif
+  WiFi.hostname(hostname);
   messageSerial.println();
   messageSerial.printf(" connected to %s, IP address: %s", WIFI_SSID, WiFi.localIP().toString().c_str());
   messageSerial.println();
