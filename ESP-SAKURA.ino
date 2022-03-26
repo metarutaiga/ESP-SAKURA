@@ -1,9 +1,9 @@
-// ESP-SAKURA 1.01
+// ESP-SAKURA 1.02
 // Copyright 2022 taiga
 
 #define MANUFACTURER    "SAKURA"
 #define MODEL           "DH1637E"
-#define VERSION         "1.01"
+#define VERSION         "1.02"
 
 #define UART_RX         3
 #define UART_TX         1
@@ -231,16 +231,18 @@ void setup() {
   }
 #else
   WiFi.persistent(false);
-  WiFi.disconnect(false);
   WiFi.setAutoReconnect(true);
+  WiFi.disconnect(false);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   messageSerial.println();
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     messageSerial.print(".");
   }
-#endif
   WiFi.hostname(hostname);
+  WiFi.persistent(false);
+  WiFi.setAutoReconnect(true);
+#endif
   messageSerial.println();
   messageSerial.printf(" connected to %s, IP address: %s", WIFI_SSID, WiFi.localIP().toString().c_str());
   messageSerial.println();
@@ -414,11 +416,27 @@ void loop() {
     }
 
     // Heap
-    static int now_FreeHeap = 0;
-    int freeHeap = ESP.getFreeHeap();
-    if (abs(now_FreeHeap - freeHeap) >= 1024) {
-      now_FreeHeap = freeHeap;
-      MQTTclient.publish(MQTTprefix("ESP", "FreeHeap", 0), itoa(now_FreeHeap, number, 10));
+    static unsigned long freeHeapMillis = 0;
+    if (freeHeapMillis < millis()) {
+      freeHeapMillis = millis() + 1000 * 10;
+      static int now_FreeHeap = 0;
+      int freeHeap = ESP.getFreeHeap();
+      if (now_FreeHeap != freeHeap) {
+        now_FreeHeap = freeHeap;
+        MQTTclient.publish(MQTTprefix("ESP", "FreeHeap", 0), itoa(now_FreeHeap, number, 10));
+      }
+    }
+
+    // RSSI
+    static unsigned long rssiMillis = 0;
+    if (rssiMillis < millis()) {
+      rssiMillis = millis() + 1000 * 10;
+      static int now_RSSI = 0;
+      int rssi = WiFi.RSSI();
+      if (now_RSSI != rssi) {
+        now_RSSI = rssi;
+        MQTTclient.publish(MQTTprefix("ESP", "RSSI", 0), itoa(rssi, number, 10));
+      }
     }
 
 #if HOMEKIT
