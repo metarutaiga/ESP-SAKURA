@@ -1,16 +1,9 @@
-// ESP-SAKURA 1.02
+// ESP-SAKURA 1.10
 // Copyright 2022 taiga
 
 #define MANUFACTURER    "SAKURA"
 #define MODEL           "DH1637E"
-#define VERSION         "1.02"
-
-#define UART_RX         3
-#define UART_TX         1
-
-#define SERIAL_RX       2
-#define SERIAL_TX       0
-#define SERIAL_HARDWARE 0
+#define VERSION         "1.10"
 
 #define WIFI_MANAGER    0
 #define WIFI_SSID       "wifi"
@@ -29,6 +22,8 @@
 
 bool forceRestart = false;
 bool forceReset = false;
+bool transfer = false;
+bool debug = false;
 byte state = 0;
 char number[128];
 char buffer[128];
@@ -42,13 +37,9 @@ char buckets[16];
 #include <SoftwareSerial.h>
 #include <WiFiUdp.h>
 
-#if SERIAL_HARDWARE
-#define messageSerial Serial1
 #define sakuraSerial Serial
-#else
-#define messageSerial Serial
-SoftwareSerial sakuraSerial(SERIAL_RX, SERIAL_TX);
-#endif
+#define messageSerial Serial1
+SoftwareSerial remoteSerial(13, 15);
 
 #include "BasicOTA.h"
 #include "MQTT_ESP8266.h"
@@ -153,6 +144,19 @@ void MQTTcallback(char* topic, char* payload, unsigned int length) {
     homekit_server_reset();
     ESP.reset();
 #endif
+  } else if (strcmp(topic, MQTTprefix("set", "Transfer", 0)) == 0) {
+    transfer = !transfer;
+  } else if (strcmp(topic, MQTTprefix("set", "Debug", 0)) == 0) {
+    debug = !debug;
+  } else if (strcmp(topic, MQTTprefix("set", "Send", 0)) == 0) {
+    for (int i = 0; i < length; ++i) {
+      char c = payload[i];
+      if (c == 0)
+        break;
+      sakuraSerial.write(c);
+    }
+    sakuraSerial.write('\r');
+    sakuraSerial.write('\n');
   } else {
     result = "unknown";
   }
@@ -259,13 +263,10 @@ void setup() {
   timeClient.begin();
 
   // Serial
-#if SERIAL_HARDWARE
   sakuraSerial.begin(9600, SERIAL_8N1, SERIAL_FULL);
-#else
-  sakuraSerial.begin(9600, SWSERIAL_8N1, SERIAL_RX, SERIAL_TX, false, 128, 1280);
-  pinMode(SERIAL_RX, INPUT);
-  pinMode(SERIAL_TX, OUTPUT);
-#endif
+  remoteSerial.begin(9600, SWSERIAL_8N1, 13, 15);
+  pinMode(13, INPUT);
+  pinMode(15, OUTPUT);
 
   // Watchdog
   ESP.wdtEnable(2000);
@@ -277,6 +278,8 @@ void loop() {
 
     forceRestart = false;
     forceReset = false;
+    transfer = true;
+    debug = false;
     state = 0;
     memset(number, 0, sizeof(number));
     memset(buffer, 0, sizeof(buffer));
@@ -317,6 +320,49 @@ void loop() {
   }
   case 10: { // Loop
 
+    // Transfer
+    if (transfer && remoteSerial.available() > 0) {
+      for (int i = 0; i < 128; ++i) {
+
+        // Wait when not responding
+        for (int i = 0; i < 100; ++i) {
+          if (remoteSerial.available() > 0)
+            break;
+          delay(16);
+          ESP.wdtFeed();
+          ArduinoOTA.handle();
+#if HOMEKIT
+          arduino_homekit_loop();
+#endif
+        }
+
+        // Reset when not responding
+        if (remoteSerial.available() <= 0)
+          break;
+        char c = remoteSerial.read();
+        if (c == '\r' || c == '\n')
+          break;
+        buffer[i] = c;
+        buffer[i + 1] = 0;
+        continue;
+      }
+
+      if (debug) {
+        MQTTclient.publish(MQTTprefix("SAKURA", "Transfer", 0), buffer);
+      }
+
+      if (buffer[0] == ':' && buffer[1] == 'H') {
+        for (int i = 0; i < 128; ++i) {
+          char c = buffer[i];
+          if (c == 0)
+            break;
+          sakuraSerial.write(c);
+        }
+        sakuraSerial.write('\r');
+        sakuraSerial.write('\n');
+      }
+    }
+
     // Protocol
     if (sakuraSerial.available() > 0) {
       for (int i = 0; i < 128; ++i) {
@@ -344,10 +390,11 @@ void loop() {
         continue;
       }
 
+      if (debug) {
+        MQTTclient.publish(MQTTprefix("SAKURA", "Receive", 0), buffer);
+      }
+
       if (buffer[0] == ':' && buffer[1] == 'H') {
-#if 0
-        MQTTclient.publish(MQTTprefix("SAKURA", "Protocol", 0), buffer);
-#endif
         int length = strlen(buffer);
         if (length > 2) {
           buffer[length - 2] = 0;
