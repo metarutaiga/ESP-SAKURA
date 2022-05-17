@@ -34,7 +34,7 @@ void MQTTreconnect(bool wait) {
     if (MQTTclient.connect(WiFi.hostname().c_str(), MQTTprefix("connected", 0), 0, true, "false")) {
       messageSerial.println("connected");
       MQTTclient.publish(MQTTprefix("connected", 0), "true", true);
-      MQTTclient.publish(MQTTprefix("ESP", "IP", 0), WiFi.localIP().toString().c_str());
+      MQTTclient.publish(MQTTprefix("ESP", "IP", 0), WiFi.localIP().toString().c_str(), true);
       MQTTclient.publish(MQTTprefix("ESP", "RSSI", 0), String(WiFi.RSSI()).c_str());
       MQTTclient.subscribe(MQTTprefix("set", "#", 0));
     }

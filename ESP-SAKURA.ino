@@ -1,9 +1,9 @@
-// ESP-SAKURA 1.10
+// ESP-SAKURA 1.11
 // Copyright 2022 taiga
 
 #define MANUFACTURER    "SAKURA"
 #define MODEL           "DH1637E"
-#define VERSION         "1.10"
+#define VERSION         "1.11"
 
 #define WIFI_MANAGER    0
 #define WIFI_SSID       "wifi"
@@ -286,17 +286,34 @@ void loop() {
     memset(status, 0, sizeof(status));
     memset(buckets, 0, sizeof(buckets));
 
-    MQTTclient.publish(MQTTprefix("ESP", "SketchSize", 0), itoa(ESP.getSketchSize(), number, 10)); 
-    MQTTclient.publish(MQTTprefix("ESP", "FreeSketchSpace", 0), itoa(ESP.getFreeSketchSpace(), number, 10));
-    MQTTclient.publish(MQTTprefix("ESP", "FlashChipSize", 0), itoa(ESP.getFlashChipSize(), number, 10));
-    MQTTclient.publish(MQTTprefix("ESP", "FlashChipRealSize", 0), itoa(ESP.getFlashChipRealSize(), number, 10));
-    MQTTclient.publish(MQTTprefix("ESP", "FlashChipSpeed", 0), itoa(ESP.getFlashChipSpeed(), number, 10));
+    MQTTclient.publish(MQTTprefix("ESP", "Vcc", 0), itoa(ESP.getVcc(), number, 10));
+    MQTTclient.publish(MQTTprefix("ESP", "ChipId", 0), itoa(ESP.getChipId(), number, 10));
+
     MQTTclient.publish(MQTTprefix("ESP", "SdkVersion", 0), ESP.getSdkVersion());
+    MQTTclient.publish(MQTTprefix("ESP", "CoreVersion", 0), ESP.getCoreVersion().c_str());
     MQTTclient.publish(MQTTprefix("ESP", "FullVersion", 0), ESP.getFullVersion().c_str());
+
+    MQTTclient.publish(MQTTprefix("ESP", "BootVersion", 0), itoa(ESP.getBootVersion(), number, 10));
+    MQTTclient.publish(MQTTprefix("ESP", "BootMode", 0), itoa(ESP.getBootMode(), number, 10));
+
     MQTTclient.publish(MQTTprefix("ESP", "CpuFreq", 0), itoa(ESP.getCpuFreqMHz(), number, 10));
-    MQTTclient.publish(MQTTprefix("ESP", "FreeHeap", 0), itoa(ESP.getFreeHeap(), number, 10));
-    MQTTclient.publish(MQTTprefix("ESP", "ResetInfo", 0), ESP.getResetInfo().c_str());
+
+    MQTTclient.publish(MQTTprefix("ESP", "FlashChipId", 0), itoa(ESP.getFlashChipId(), number, 10));
+    MQTTclient.publish(MQTTprefix("ESP", "FlashChipVendorId", 0), itoa(ESP.getFlashChipVendorId(), number, 10));
+
+    MQTTclient.publish(MQTTprefix("ESP", "FlashChipRealSize", 0), itoa(ESP.getFlashChipRealSize(), number, 10));
+    MQTTclient.publish(MQTTprefix("ESP", "FlashChipSize", 0), itoa(ESP.getFlashChipSize(), number, 10));
+    MQTTclient.publish(MQTTprefix("ESP", "FlashChipSpeed", 0), itoa(ESP.getFlashChipSpeed(), number, 10));
+    MQTTclient.publish(MQTTprefix("ESP", "FlashChipMode", 0), itoa(ESP.getFlashChipMode(), number, 10));
+    MQTTclient.publish(MQTTprefix("ESP", "FlashChipSizeByChipId", 0), itoa(ESP.getFlashChipSizeByChipId(), number, 10));
+
+    MQTTclient.publish(MQTTprefix("ESP", "SketchSize", 0), itoa(ESP.getSketchSize(), number, 10));
+    MQTTclient.publish(MQTTprefix("ESP", "SketchMD5", 0), ESP.getSketchMD5().c_str());
+    MQTTclient.publish(MQTTprefix("ESP", "FreeSketchSpace", 0), itoa(ESP.getFreeSketchSpace(), number, 10));
+
     MQTTclient.publish(MQTTprefix("ESP", "ResetReason", 0), ESP.getResetReason().c_str());
+    MQTTclient.publish(MQTTprefix("ESP", "ResetInfo", 0), ESP.getResetInfo().c_str());
+
     MQTTclient.publish(MQTTprefix("ESP", "Build", 0), __DATE__ " " __TIME__, true);
     MQTTclient.publish(MQTTprefix("ESP", "Version", 0), VERSION, true);
 
